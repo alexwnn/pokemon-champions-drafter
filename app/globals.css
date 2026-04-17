@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0d10;
+  --color-surface: #141820;
+  --color-surface-2: #1b212b;
+  --color-border: #242a33;
+  --color-text: #e7ecf2;
+  --color-muted: #8b95a5;
+  --color-primary: #4f98a3;
+  --color-primary-soft: #2d5b63;
+  --color-danger: #e04c59;
+  --color-danger-soft: #4a1d24;
+  --color-gold: #e8c46a;
+  --color-success: #5bc28f;
+
+  --color-type-normal: #a8a77a;
+  --color-type-fire: #ee8130;
+  --color-type-water: #6390f0;
+  --color-type-electric: #f7d02c;
+  --color-type-grass: #7ac74c;
+  --color-type-ice: #96d9d6;
+  --color-type-fighting: #c22e28;
+  --color-type-poison: #a33ea1;
+  --color-type-ground: #e2bf65;
+  --color-type-flying: #a98ff3;
+  --color-type-psychic: #f95587;
+  --color-type-bug: #a6b91a;
+  --color-type-rock: #b6a136;
+  --color-type-ghost: #735797;
+  --color-type-dragon: #6f35fc;
+  --color-type-dark: #705746;
+  --color-type-steel: #b7b7ce;
+  --color-type-fairy: #d685ad;
+
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, SFMono-Regular, monospace;
+}
+
+[data-theme="light"] {
+  --color-bg: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef0f4;
+  --color-border: #d9dee6;
+  --color-text: #10151c;
+  --color-muted: #5a6574;
+  --color-primary: #2e7a85;
+  --color-primary-soft: #b6e0e6;
+  --color-danger: #c2384a;
+  --color-danger-soft: #f3c5ca;
+  --color-gold: #b88a1a;
+  --color-success: #228a57;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+*::selection {
+  background: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  color: var(--color-text);
+}
+
+/* Thin scrollbars on dark mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
