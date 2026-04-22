@@ -15,30 +15,30 @@ export interface Suggestion {
 }
 
 const TEAMMATE_BOOST_BASE = 20;
+const MAX_SUGGESTIONS = 8;
 
-export function useOpponentSuggestions(): Suggestion[] {
+export function usePoolSuggestions(side: "my" | "opp"): Suggestion[] {
   const format = useAppStore((s) => s.format);
   const oppPool = useAppStore((s) => s.oppPool);
   const myPool = useAppStore((s) => s.myPool);
   const usageCache = useAppStore((s) => s.usageCache);
   const { data: topList } = useTopList(format);
 
+  const primaryPool = side === "my" ? myPool : oppPool;
+
   useEffect(() => {
-    oppPool.forEach((p) => {
+    primaryPool.forEach((p) => {
       if (p) ensureUsage(format, p.slug);
     });
-  }, [oppPool, format]);
+  }, [primaryPool, format]);
 
   return useMemo(() => {
     if (!topList) return [];
     const usedSlugs = new Set<string>();
-    oppPool.forEach((p) => p && usedSlugs.add(p.slug));
-    myPool.forEach((p) => p && usedSlugs.add(p.slug));
-    const emptyCount = oppPool.filter((p) => !p).length;
-    if (emptyCount === 0) return [];
+    primaryPool.forEach((p) => p && usedSlugs.add(p.slug));
 
     const teammateBoost = new Map<string, { pct: number; from: string }>();
-    oppPool.forEach((p) => {
+    primaryPool.forEach((p) => {
       if (!p) return;
       const usage = usageCache.get(`${format}:${p.slug}`);
       if (!usage) return;
@@ -63,7 +63,7 @@ export function useOpponentSuggestions(): Suggestion[] {
       })
       .sort((a, b) => b.score - a.score);
 
-    return scored.slice(0, emptyCount).map<Suggestion>((s) => ({
+    return scored.slice(0, MAX_SUGGESTIONS).map<Suggestion>((s) => ({
       slug: s.entry.slug,
       displayName: s.entry.displayName,
       usagePct: s.entry.usagePct,
@@ -71,5 +71,9 @@ export function useOpponentSuggestions(): Suggestion[] {
       reason: s.boost ? "teammate" : "top",
       boostedBy: s.boost?.from,
     }));
-  }, [topList, oppPool, myPool, usageCache, format]);
+  }, [topList, oppPool, myPool, primaryPool, usageCache, format]);
+}
+
+export function useOpponentSuggestions(): Suggestion[] {
+  return usePoolSuggestions("opp");
 }

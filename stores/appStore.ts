@@ -13,15 +13,17 @@ import type {
 } from "@/lib/types";
 
 const POOL_SIZE = 6;
-const BATTLE_SIZE = 3;
+const MAX_BATTLE_SIZE = 4;
 const MOVESET_SIZE = 4;
 
 type DrawerTab = "strengths" | "weaknesses" | "coverage";
+type TeamSize = 3 | 4;
 
 interface PersistedSlice {
   savedTeams: SavedTeam[];
   theme: Theme;
   format: string;
+  teamSize: TeamSize;
 }
 
 interface AppState extends PersistedSlice {
@@ -30,6 +32,8 @@ interface AppState extends PersistedSlice {
   myBattle: number[];
   oppBattle: number[];
   myMovesets: (string | null)[][];
+  myItems: (string | null)[];
+  myAbilities: (string | null)[];
 
   pokemonCache: Map<string, PokemonData>;
   usageCache: Map<string, UsageData>;
@@ -43,6 +47,7 @@ interface AppState extends PersistedSlice {
 
   setTheme: (t: Theme) => void;
   setFormat: (f: string) => void;
+  setTeamSize: (n: TeamSize) => void;
 
   setSlot: (side: "my" | "opp", idx: number, mon: Pokemon | null) => void;
   clearSide: (side: "my" | "opp") => void;
@@ -53,6 +58,16 @@ interface AppState extends PersistedSlice {
     moveName: string | null,
   ) => void;
   clearMyMoveset: (teamIdx: number) => void;
+  setMyItem: (teamIdx: number, item: string | null) => void;
+  setMyAbility: (teamIdx: number, ability: string | null) => void;
+  importMyTeam: (
+    members: {
+      pokemon: Pokemon;
+      item?: string | null;
+      ability?: string | null;
+      moves?: (string | null)[];
+    }[],
+  ) => void;
 
   toggleBattle: (side: "my" | "opp", idx: number) => void;
   setBattle: (side: "my" | "opp", battle: number[]) => void;
@@ -80,6 +95,9 @@ const emptyMovesets = (): (string | null)[][] =>
     Array.from({ length: MOVESET_SIZE }, () => null),
   );
 
+const emptySlotStrings = (): (string | null)[] =>
+  Array.from({ length: POOL_SIZE }, () => null);
+
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -88,6 +106,8 @@ export const useAppStore = create<AppState>()(
       myBattle: [],
       oppBattle: [],
       myMovesets: emptyMovesets(),
+      myItems: emptySlotStrings(),
+      myAbilities: emptySlotStrings(),
 
       pokemonCache: new Map(),
       usageCache: new Map(),
@@ -98,8 +118,9 @@ export const useAppStore = create<AppState>()(
       selectedSlot: null,
 
       drawerTab: "strengths",
-      theme: "dark",
+      theme: "light",
       format: "championspreview",
+      teamSize: 3,
       apiStatus: { pokeapi: "unknown", pikalytics: "unknown" },
 
       setTheme: (t) => {
@@ -109,6 +130,13 @@ export const useAppStore = create<AppState>()(
         }
       },
       setFormat: (f) => set({ format: f }),
+      setTeamSize: (n) => {
+        set({
+          teamSize: n,
+          myBattle: get().myBattle.slice(0, n),
+          oppBattle: get().oppBattle.slice(0, n),
+        });
+      },
 
       setSlot: (side, idx, mon) => {
         const key = side === "my" ? "myPool" : "oppPool";
@@ -119,6 +147,10 @@ export const useAppStore = create<AppState>()(
         if (side === "my" && mon === null) {
           patch.myMovesets = get().myMovesets.map((set, i) =>
             i === idx ? Array.from({ length: MOVESET_SIZE }, () => null) : set,
+          );
+          patch.myItems = get().myItems.map((it, i) => (i === idx ? null : it));
+          patch.myAbilities = get().myAbilities.map((ab, i) =>
+            i === idx ? null : ab,
           );
         }
         const battle = get()[battleKey].filter((i) => pool[i] !== null);
@@ -133,7 +165,13 @@ export const useAppStore = create<AppState>()(
         const key = side === "my" ? "myPool" : "oppPool";
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
         const patch: Partial<AppState> =
-          side === "my" ? { myMovesets: emptyMovesets() } : {};
+          side === "my"
+            ? {
+                myMovesets: emptyMovesets(),
+                myItems: emptySlotStrings(),
+                myAbilities: emptySlotStrings(),
+              }
+            : {};
         set({
           ...patch,
           [key]: emptyPool(),
@@ -148,6 +186,8 @@ export const useAppStore = create<AppState>()(
           myBattle: [],
           oppBattle: [],
           myMovesets: emptyMovesets(),
+          myItems: emptySlotStrings(),
+          myAbilities: emptySlotStrings(),
           selectedSide: null,
           selectedSlot: null,
         }),
@@ -174,16 +214,62 @@ export const useAppStore = create<AppState>()(
         set({ myMovesets: next });
       },
 
+      setMyItem: (teamIdx, item) => {
+        if (teamIdx < 0 || teamIdx >= POOL_SIZE) return;
+        if (!get().myPool[teamIdx]) return;
+        const next = get().myItems.map((it, i) => (i === teamIdx ? item : it));
+        set({ myItems: next });
+      },
+
+      setMyAbility: (teamIdx, ability) => {
+        if (teamIdx < 0 || teamIdx >= POOL_SIZE) return;
+        if (!get().myPool[teamIdx]) return;
+        const next = get().myAbilities.map((ab, i) =>
+          i === teamIdx ? ability : ab,
+        );
+        set({ myAbilities: next });
+      },
+
+      importMyTeam: (members) => {
+        const pool = emptyPool();
+        const items = emptySlotStrings();
+        const abilities = emptySlotStrings();
+        const movesets = emptyMovesets();
+        members.slice(0, POOL_SIZE).forEach((m, i) => {
+          pool[i] = m.pokemon;
+          items[i] = m.item ?? null;
+          abilities[i] = m.ability ?? null;
+          if (m.moves) {
+            const mv = Array.from({ length: MOVESET_SIZE }, () => null) as (
+              | string
+              | null
+            )[];
+            m.moves.slice(0, MOVESET_SIZE).forEach((name, j) => {
+              mv[j] = name ?? null;
+            });
+            movesets[i] = mv;
+          }
+        });
+        set({
+          myPool: pool,
+          myItems: items,
+          myAbilities: abilities,
+          myMovesets: movesets,
+          myBattle: [],
+        });
+      },
+
       toggleBattle: (side, idx) => {
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
         const poolKey = side === "my" ? "myPool" : "oppPool";
         const pool = get()[poolKey];
         if (pool[idx] == null) return;
+        const cap = get().teamSize;
         const current = get()[battleKey];
         let next: number[];
         if (current.includes(idx)) {
           next = current.filter((i) => i !== idx);
-        } else if (current.length < BATTLE_SIZE) {
+        } else if (current.length < cap) {
           next = [...current, idx];
         } else {
           next = [...current.slice(1), idx];
@@ -193,7 +279,8 @@ export const useAppStore = create<AppState>()(
 
       setBattle: (side, battle) => {
         const battleKey = side === "my" ? "myBattle" : "oppBattle";
-        set({ [battleKey]: battle.slice(0, BATTLE_SIZE) } as unknown as Partial<AppState>);
+        const cap = get().teamSize;
+        set({ [battleKey]: battle.slice(0, cap) } as unknown as Partial<AppState>);
       },
 
       openDrawer: (side, idx) => set({ selectedSide: side, selectedSlot: idx }),
@@ -221,12 +308,28 @@ export const useAppStore = create<AppState>()(
 
       saveTeam: (name) => {
         const pool = get().myPool;
-        const members = pool.map((m) => m?.slug ?? "").filter(Boolean);
+        const members: string[] = [];
+        const items: (string | null)[] = [];
+        const abilities: (string | null)[] = [];
+        const movesets: (string | null)[][] = [];
+        const myItems = get().myItems;
+        const myAbilities = get().myAbilities;
+        const myMovesets = get().myMovesets;
+        pool.forEach((m, i) => {
+          if (!m) return;
+          members.push(m.slug);
+          items.push(myItems[i] ?? null);
+          abilities.push(myAbilities[i] ?? null);
+          movesets.push([...myMovesets[i]]);
+        });
         if (members.length === 0) return;
         const team: SavedTeam = {
           id: crypto.randomUUID(),
           name: name.trim() || `Team ${get().savedTeams.length + 1}`,
           members,
+          items,
+          abilities,
+          movesets,
           battleSelection: [...get().myBattle],
           createdAt: Date.now(),
         };
@@ -255,8 +358,30 @@ export const useAppStore = create<AppState>()(
         const validBattle = (team.battleSelection ?? []).filter(
           (i) => pool[i] !== null,
         );
-        const patch: Partial<AppState> =
-          into === "my" ? { myMovesets: emptyMovesets() } : {};
+        const patch: Partial<AppState> = {};
+        if (into === "my") {
+          const items = emptySlotStrings();
+          const abilities = emptySlotStrings();
+          const movesets = emptyMovesets();
+          team.members.slice(0, POOL_SIZE).forEach((_slug, i) => {
+            items[i] = team.items?.[i] ?? null;
+            abilities[i] = team.abilities?.[i] ?? null;
+            const saved = team.movesets?.[i];
+            if (saved) {
+              const mv = Array.from({ length: MOVESET_SIZE }, () => null) as (
+                | string
+                | null
+              )[];
+              saved.slice(0, MOVESET_SIZE).forEach((name, j) => {
+                mv[j] = name ?? null;
+              });
+              movesets[i] = mv;
+            }
+          });
+          patch.myItems = items;
+          patch.myAbilities = abilities;
+          patch.myMovesets = movesets;
+        }
         set({
           ...patch,
           [poolKey]: pool,
@@ -274,10 +399,11 @@ export const useAppStore = create<AppState>()(
         savedTeams: state.savedTeams,
         theme: state.theme,
         format: state.format,
+        teamSize: state.teamSize,
       }),
     },
   ),
 );
 
 export const POOL_SLOTS = POOL_SIZE;
-export const BATTLE_SLOTS = BATTLE_SIZE;
+export const MAX_BATTLE_SLOTS = MAX_BATTLE_SIZE;

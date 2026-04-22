@@ -1,77 +1,99 @@
 "use client";
 
+import Image from "next/image";
+import { useState } from "react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
-import { APIStatusDot } from "@/components/ui/APIStatusDot";
+import { FormatToggle } from "@/components/ui/FormatToggle";
 import { TeamPanel } from "@/components/team/TeamPanel";
-import { SavedTeamsList } from "@/components/team/SavedTeamsList";
-import { GhostSuggestion } from "@/components/team/GhostSuggestion";
+import { AddMonModal } from "@/components/team/AddMonModal";
+import { ImportModal } from "@/components/team/ImportModal";
+import { SaveTeamModal } from "@/components/team/SaveTeamModal";
 import { useApiStatus } from "@/hooks/useApiStatus";
-import { useOpponentSuggestions } from "@/hooks/useOpponentSuggestions";
 import { CoverageMatrix } from "@/components/analysis/CoverageMatrix";
 import { RecommendationPanel } from "@/components/analysis/RecommendationPanel";
-import { AnalysisSummary } from "@/components/analysis/AnalysisSummary";
 import { PokemonDrawer } from "@/components/detail/PokemonDrawer";
 import { DegradedBanner } from "@/components/ui/DegradedBanner";
-import { useAppStore } from "@/stores/appStore";
+
+type AddingSide = "my" | "opp" | null;
 
 export default function Home() {
   useApiStatus();
-  const format = useAppStore((s) => s.format);
-  const oppPool = useAppStore((s) => s.oppPool);
-  const suggestions = useOpponentSuggestions();
 
-  // Map empty-slot-index → suggestion (walks in slot order, pulls from ranked list)
-  const suggestionBySlot = new Map<number, (typeof suggestions)[number]>();
-  let sIdx = 0;
-  oppPool.forEach((p, i) => {
-    if (!p && suggestions[sIdx]) {
-      suggestionBySlot.set(i, suggestions[sIdx]);
-      sIdx++;
-    }
-  });
+  const [hoverLineup, setHoverLineup] = useState<{
+    mine: number[];
+    opp: number[];
+  } | null>(null);
+  const [addingTo, setAddingTo] = useState<AddingSide>(null);
+  const [importOpen, setImportOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-surface/60 backdrop-blur sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <div className="h-6 w-6 rounded bg-primary" aria-hidden />
-          <span className="font-semibold tracking-tight">
-            Champions Drafter
-          </span>
-          <span className="hidden sm:inline text-xs font-mono text-muted">
-            {format}
-          </span>
+      <header className="grid h-[60px] grid-cols-[1fr_auto] items-center border-b border-border bg-surface px-6">
+        <div className="flex min-w-0 items-center gap-[14px]">
+          <Image
+            src="/logo.png"
+            alt="Machampion"
+            width={36}
+            height={36}
+            priority
+            className="h-9 w-9 shrink-0 [image-rendering:pixelated]"
+          />
+          <div className="text-base font-semibold tracking-tight">
+            Machampion
+          </div>
+          <div className="h-[18px] w-px bg-border" />
+          <FormatToggle />
         </div>
-        <div className="flex items-center gap-4">
-          <APIStatusDot />
+
+        <div className="flex items-center gap-3">
           <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => setSaveOpen(true)}
+            className="rounded-[7px] border-none bg-primary px-[14px] py-[7px] text-xs font-semibold text-white"
+          >
+            Save team
+          </button>
         </div>
       </header>
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)_340px] gap-4 p-4">
-        <aside className="order-2 lg:order-1">
-          <SavedTeamsList />
+
+      <main className="grid flex-1 grid-cols-1 items-start gap-3.5 p-3.5 xl:grid-cols-[240px_minmax(0,1fr)_240px]">
+        <aside className="order-2 min-w-0 xl:order-1">
+          <TeamPanel
+            side="my"
+            title="My Pool"
+            accent="primary"
+            highlightedIndices={hoverLineup?.mine ?? null}
+            onAdd={() => setAddingTo("my")}
+            onImport={() => setImportOpen(true)}
+          />
         </aside>
-        <section className="order-1 lg:order-2 flex flex-col gap-4 min-w-0">
+
+        <section className="order-1 flex min-w-0 flex-col gap-3.5 xl:order-2">
           <DegradedBanner />
-          <TeamPanel side="my" title="My Pool" accent="primary" />
+          <CoverageMatrix />
+          <RecommendationPanel onHover={setHoverLineup} />
+        </section>
+
+        <aside className="order-3 min-w-0">
           <TeamPanel
             side="opp"
             title="Opponent Pool"
             accent="danger"
-            slotPlaceholder={(i) => {
-              const s = suggestionBySlot.get(i);
-              if (!s) return null;
-              return <GhostSuggestion suggestion={s} slotIdx={i} />;
-            }}
+            highlightedIndices={hoverLineup?.opp ?? null}
+            onAdd={() => setAddingTo("opp")}
           />
-          <CoverageMatrix />
-          <RecommendationPanel />
-        </section>
-        <aside className="order-3">
-          <AnalysisSummary />
         </aside>
       </main>
+
       <PokemonDrawer />
+
+      {addingTo && (
+        <AddMonModal side={addingTo} onClose={() => setAddingTo(null)} />
+      )}
+      {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}
+      {saveOpen && <SaveTeamModal onClose={() => setSaveOpen(false)} />}
     </div>
   );
 }
