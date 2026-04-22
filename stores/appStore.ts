@@ -72,7 +72,7 @@ interface AppState extends PersistedSlice {
       ability?: string | null;
       moves?: (string | null)[];
     }[],
-  ) => void;
+  ) => { added: number; duplicates: number; full: number };
 
   toggleBattle: (side: "my" | "opp", idx: number) => void;
   setBattle: (side: "my" | "opp", battle: number[]) => void;
@@ -257,32 +257,76 @@ export const useAppStore = create<AppState>()(
       },
 
       importMyTeam: (members) => {
-        const pool = emptyPool();
-        const items = emptySlotStrings();
-        const abilities = emptySlotStrings();
-        const movesets = emptyMovesets();
-        members.slice(0, POOL_SIZE).forEach((m, i) => {
-          pool[i] = m.pokemon;
-          items[i] = m.item ?? null;
-          abilities[i] = m.ability ?? null;
+        const currentPool = get().myPool;
+        const currentItems = get().myItems;
+        const currentAbilities = get().myAbilities;
+        const currentMovesets = get().myMovesets;
+        const pool = [...currentPool];
+        const items = [...currentItems];
+        const abilities = [...currentAbilities];
+        const movesets = currentMovesets.map((set) => [...set]);
+        const existingKeys = new Set(
+          pool
+            .filter((p): p is Pokemon => !!p)
+            .map((p) =>
+              p.id > 0
+                ? `id:${p.id}`
+                : p.slug
+                  ? `slug:${p.slug.toLowerCase()}`
+                  : `name:${p.name.trim().toLowerCase()}`,
+            ),
+        );
+
+        let added = 0;
+        let duplicates = 0;
+        let full = 0;
+
+        for (const m of members) {
+          const mon = m.pokemon;
+          const key =
+            mon.id > 0
+              ? `id:${mon.id}`
+              : mon.slug
+                ? `slug:${mon.slug.toLowerCase()}`
+                : `name:${mon.name.trim().toLowerCase()}`;
+          if (existingKeys.has(key)) {
+            duplicates += 1;
+            continue;
+          }
+          const idx = pool.findIndex((p) => p === null);
+          if (idx === -1 || idx >= POOL_SIZE) {
+            full += 1;
+            continue;
+          }
+          pool[idx] = mon;
+          existingKeys.add(key);
+          added += 1;
+          items[idx] = m.item ?? null;
+          abilities[idx] = m.ability ?? null;
+          const mv = Array.from({ length: MOVESET_SIZE }, () => null) as (
+            | string
+            | null
+          )[];
           if (m.moves) {
-            const mv = Array.from({ length: MOVESET_SIZE }, () => null) as (
-              | string
-              | null
-            )[];
             m.moves.slice(0, MOVESET_SIZE).forEach((name, j) => {
               mv[j] = name ?? null;
             });
-            movesets[i] = mv;
           }
-        });
-        set({
-          myPool: pool,
-          myItems: items,
-          myAbilities: abilities,
-          myMovesets: movesets,
-          myBattle: [],
-        });
+          movesets[idx] = mv;
+        }
+
+        if (added > 0) {
+          const myBattle = get().myBattle.filter((i) => pool[i] !== null);
+          set({
+            myPool: pool,
+            myItems: items,
+            myAbilities: abilities,
+            myMovesets: movesets,
+            myBattle,
+          });
+        }
+
+        return { added, duplicates, full };
       },
 
       toggleBattle: (side, idx) => {

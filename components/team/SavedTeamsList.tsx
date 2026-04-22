@@ -79,7 +79,7 @@ export function SavedTeamsList() {
     }
     setImporting(true);
     const results = await Promise.allSettled(
-      parsed.slice(0, 6).map((m) => ensurePokemonDetail(m.slug)),
+      parsed.map((m) => ensurePokemonDetail(m.slug)),
     );
     const members: Parameters<typeof importMyTeam>[0] = [];
     const failed: string[] = [];
@@ -101,9 +101,22 @@ export function SavedTeamsList() {
       setImportError(`Not found: ${failed.join(", ")}`);
       return;
     }
-    importMyTeam(members);
-    if (failed.length) {
-      setImportError(`Imported ${members.length}. Not found: ${failed.join(", ")}`);
+    const outcome = importMyTeam(members);
+    const notices: string[] = [];
+    if (outcome.full > 0) {
+      notices.push(
+        `Pool full. ${outcome.full} Pokémon could not be added. Please clear space to add more.`,
+      );
+    }
+    if (outcome.duplicates > 0) {
+      notices.push(
+        `${outcome.duplicates} Pokémon already in pool and were skipped.`,
+      );
+    }
+    if (failed.length) notices.push(`Not found: ${failed.join(", ")}`);
+
+    if (notices.length > 0) {
+      setImportError(`Added ${outcome.added} Pokémon. ${notices.join(" ")}`);
     } else {
       setImportText("");
       setShowImport(false);

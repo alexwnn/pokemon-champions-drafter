@@ -5,7 +5,7 @@ import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { ensurePokemonDetail } from "@/hooks/usePokemonDetail";
 import { toLightPokemon } from "@/lib/pokeapi";
 import { moveToSlug, parseShowdown } from "@/lib/showdown";
-import { useAppStore, POOL_SLOTS } from "@/stores/appStore";
+import { useAppStore } from "@/stores/appStore";
 
 const SHOWDOWN_PLACEHOLDER = `Incineroar @ Sitrus Berry
 Ability: Intimidate
@@ -41,7 +41,7 @@ export function ImportModal({ onClose }: Props) {
     }
     setImporting(true);
     const results = await Promise.allSettled(
-      parsed.slice(0, POOL_SLOTS).map((m) => ensurePokemonDetail(m.slug)),
+      parsed.map((m) => ensurePokemonDetail(m.slug)),
     );
     const members: Parameters<typeof importMyTeam>[0] = [];
     const failed: string[] = [];
@@ -63,11 +63,23 @@ export function ImportModal({ onClose }: Props) {
       setImportError(`Not found: ${failed.join(", ")}`);
       return;
     }
-    importMyTeam(members);
-    if (failed.length) {
-      setImportError(
-        `Imported ${members.length}. Not found: ${failed.join(", ")}`,
+    const outcome = importMyTeam(members);
+    const notices: string[] = [];
+    if (outcome.full > 0) {
+      notices.push(
+        `Pool full. ${outcome.full} Pokémon could not be added. Please clear space to add more.`,
       );
+    }
+    if (outcome.duplicates > 0) {
+      notices.push(
+        `${outcome.duplicates} Pokémon already in pool and were skipped.`,
+      );
+    }
+    if (failed.length) notices.push(`Not found: ${failed.join(", ")}`);
+
+    if (notices.length > 0) {
+      const importedLabel = `Added ${outcome.added} Pokémon.`;
+      setImportError(`${importedLabel} ${notices.join(" ")}`);
     } else {
       setImportText("");
       onClose();
