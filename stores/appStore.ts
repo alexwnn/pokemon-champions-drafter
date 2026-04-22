@@ -31,6 +31,7 @@ interface AppState extends PersistedSlice {
   oppPool: (Pokemon | null)[];
   myBattle: number[];
   oppBattle: number[];
+  hoveredLineup: { my: number[]; opp: number[] } | null;
   myMovesets: (string | null)[][];
   myItems: (string | null)[];
   myAbilities: (string | null)[];
@@ -71,6 +72,7 @@ interface AppState extends PersistedSlice {
 
   toggleBattle: (side: "my" | "opp", idx: number) => void;
   setBattle: (side: "my" | "opp", battle: number[]) => void;
+  setHoveredLineup: (lineup: { my: number[]; opp: number[] } | null) => void;
 
   openDrawer: (side: "my" | "opp", idx: number) => void;
   closeDrawer: () => void;
@@ -105,6 +107,7 @@ export const useAppStore = create<AppState>()(
       oppPool: emptyPool(),
       myBattle: [],
       oppBattle: [],
+      hoveredLineup: null,
       myMovesets: emptyMovesets(),
       myItems: emptySlotStrings(),
       myAbilities: emptySlotStrings(),
@@ -185,6 +188,7 @@ export const useAppStore = create<AppState>()(
           oppPool: emptyPool(),
           myBattle: [],
           oppBattle: [],
+          hoveredLineup: null,
           myMovesets: emptyMovesets(),
           myItems: emptySlotStrings(),
           myAbilities: emptySlotStrings(),
@@ -282,6 +286,7 @@ export const useAppStore = create<AppState>()(
         const cap = get().teamSize;
         set({ [battleKey]: battle.slice(0, cap) } as unknown as Partial<AppState>);
       },
+      setHoveredLineup: (lineup) => set({ hoveredLineup: lineup }),
 
       openDrawer: (side, idx) => set({ selectedSide: side, selectedSlot: idx }),
       closeDrawer: () => set({ selectedSide: null, selectedSlot: null }),

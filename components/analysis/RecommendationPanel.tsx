@@ -7,17 +7,14 @@ import { useRecommendations } from "@/hooks/useRecommendations";
 import { useAppStore } from "@/stores/appStore";
 import type { LineupRecommendation } from "@/lib/analysis";
 
-interface Props {
-  onHover?: (hover: { mine: number[]; opp: number[] } | null) => void;
-}
-
-export function RecommendationPanel({ onHover }: Props) {
+export function RecommendationPanel() {
   const { picks } = useRecommendations();
   const myPool = useAppStore((s) => s.myPool);
   const oppPool = useAppStore((s) => s.oppPool);
   const myBattle = useAppStore((s) => s.myBattle);
   const oppBattle = useAppStore((s) => s.oppBattle);
   const setBattle = useAppStore((s) => s.setBattle);
+  const setHoveredLineup = useAppStore((s) => s.setHoveredLineup);
 
   const myCount = myPool.filter((p) => p).length;
   const oppCount = oppPool.filter((p) => p).length;
@@ -63,9 +60,9 @@ export function RecommendationPanel({ onHover }: Props) {
               rec={rec}
               applied={isApplied}
               onEnter={() =>
-                onHover?.({ mine: rec.myIndices, opp: rec.predictedOppIndices })
+                setHoveredLineup({ my: rec.myIndices, opp: rec.predictedOppIndices })
               }
-              onLeave={() => onHover?.(null)}
+              onLeave={() => setHoveredLineup(null)}
               onClick={() => {
                 if (isApplied) {
                   setBattle("my", []);

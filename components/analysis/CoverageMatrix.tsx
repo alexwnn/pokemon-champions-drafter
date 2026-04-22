@@ -24,6 +24,7 @@ export function CoverageMatrix() {
   const oppPool = useAppStore((s) => s.oppPool);
   const myBattle = useAppStore((s) => s.myBattle);
   const oppBattle = useAppStore((s) => s.oppBattle);
+  const hoveredLineup = useAppStore((s) => s.hoveredLineup);
   const toggleBattle = useAppStore((s) => s.toggleBattle);
 
   const [hoverCell, setHoverCell] = useState<[number, number] | null>(null);
@@ -42,6 +43,8 @@ export function CoverageMatrix() {
   // Resolve pool indices for each analyzed mon so we can drive battle-toggle on click
   const myIndices = mine.map((m) => m.slotIndex ?? myPool.findIndex((p) => p?.slug === m.pokemon.slug));
   const oppIndices = opps.map((o) => o.slotIndex ?? oppPool.findIndex((p) => p?.slug === o.pokemon.slug));
+  const effectiveMyBattle = hoveredLineup?.my ?? myBattle;
+  const effectiveOppBattle = hoveredLineup?.opp ?? oppBattle;
 
   return (
     <section className="rounded-[10px] border border-border bg-surface">
@@ -63,8 +66,8 @@ export function CoverageMatrix() {
               <th />
               {opps.map((o, ci) => {
                 const poolIdx = oppIndices[ci];
-                const isOppPicked = poolIdx >= 0 && oppBattle.includes(poolIdx);
-                const hasOppPicks = oppBattle.length > 0;
+                const isOppPicked = poolIdx >= 0 && effectiveOppBattle.includes(poolIdx);
+                const hasOppPicks = effectiveOppBattle.length > 0;
                 return (
                   <th
                     key={o.pokemon.slug}
@@ -111,8 +114,8 @@ export function CoverageMatrix() {
           <tbody>
             {matrix.map((row, ri) => {
               const poolIdx = myIndices[ri];
-              const isMyPicked = poolIdx >= 0 && myBattle.includes(poolIdx);
-              const hasMyPicks = myBattle.length > 0;
+              const isMyPicked = poolIdx >= 0 && effectiveMyBattle.includes(poolIdx);
+              const hasMyPicks = effectiveMyBattle.length > 0;
               return (
                 <tr key={mine[ri].pokemon.slug}>
                   <th style={{ padding: 0, paddingRight: 10 }}>
@@ -150,8 +153,8 @@ export function CoverageMatrix() {
                   </th>
                   {row.map((cell, ci) => {
                     const oppPoolIdx = oppIndices[ci];
-                    const isOppPicked = oppPoolIdx >= 0 && oppBattle.includes(oppPoolIdx);
-                    const hasOppPicks = oppBattle.length > 0;
+                    const isOppPicked = oppPoolIdx >= 0 && effectiveOppBattle.includes(oppPoolIdx);
+                    const hasOppPicks = effectiveOppBattle.length > 0;
                     const rowH = isMyPicked;
                     const colH = isOppPicked;
                     const bothSidesHavePicks = hasMyPicks && hasOppPicks;

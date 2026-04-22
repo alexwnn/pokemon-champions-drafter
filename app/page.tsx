@@ -19,10 +19,6 @@ type AddingSide = "my" | "opp" | null;
 export default function Home() {
   useApiStatus();
 
-  const [hoverLineup, setHoverLineup] = useState<{
-    mine: number[];
-    opp: number[];
-  } | null>(null);
   const [addingTo, setAddingTo] = useState<AddingSide>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
@@ -64,7 +60,6 @@ export default function Home() {
             side="my"
             title="My Pool"
             accent="primary"
-            highlightedIndices={hoverLineup?.mine ?? null}
             onAdd={() => setAddingTo("my")}
             onImport={() => setImportOpen(true)}
           />
@@ -73,7 +68,7 @@ export default function Home() {
         <section className="order-1 flex min-w-0 flex-col gap-3.5 xl:order-2">
           <DegradedBanner />
           <CoverageMatrix />
-          <RecommendationPanel onHover={setHoverLineup} />
+          <RecommendationPanel />
         </section>
 
         <aside className="order-3 min-w-0">
@@ -81,7 +76,6 @@ export default function Home() {
             side="opp"
             title="Opponent Pool"
             accent="danger"
-            highlightedIndices={hoverLineup?.opp ?? null}
             onAdd={() => setAddingTo("opp")}
           />
         </aside>

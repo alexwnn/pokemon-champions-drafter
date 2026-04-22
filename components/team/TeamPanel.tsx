@@ -36,6 +36,10 @@ export function TeamPanel({
   const myMovesets = useAppStore((s) => s.myMovesets);
   const setMyMovesetMove = useAppStore((s) => s.setMyMovesetMove);
   const clearMyMoveset = useAppStore((s) => s.clearMyMoveset);
+  const hoveredLineupIndices = useAppStore((s) =>
+    side === "my" ? s.hoveredLineup?.my ?? null : s.hoveredLineup?.opp ?? null,
+  );
+  const activeHighlightedIndices = highlightedIndices ?? hoveredLineupIndices;
 
   const filled = pool.filter((p) => p).length;
   const canAdd = filled < POOL_SLOTS;
@@ -74,10 +78,10 @@ export function TeamPanel({
         {pool.map((mon, i) => {
           if (!mon) return null;
           const isBattle = battle.includes(i);
-          const isHighlighted = !!highlightedIndices?.includes(i);
+          const isHighlighted = !!activeHighlightedIndices?.includes(i);
           const dim =
-            !!highlightedIndices &&
-            highlightedIndices.length > 0 &&
+            !!activeHighlightedIndices &&
+            activeHighlightedIndices.length > 0 &&
             !isHighlighted;
           const showMoveset = side === "my" && movesetSlot === i;
 
