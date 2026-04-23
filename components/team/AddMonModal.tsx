@@ -6,37 +6,14 @@ import { Search } from "lucide-react";
 import { Modal, ModalHeader } from "@/components/ui/Modal";
 import { ensurePokemonDetail } from "@/hooks/usePokemonDetail";
 import { usePoolSuggestions } from "@/hooks/useOpponentSuggestions";
-import {
-  fetchPokemonList,
-  spriteUrl as pokeSpriteUrl,
-  toLightPokemon,
-} from "@/lib/pokeapi";
+import { toLightPokemon } from "@/lib/pokeapi";
 import {
   CHAMPIONS_LEGAL_LIST,
   getChampionsEntry,
   normalizePokemonLookupToken,
 } from "@/src/data/pokemon-registry";
 import { useAppStore, POOL_SLOTS } from "@/stores/appStore";
-import type { Pokemon, PokemonListItem } from "@/lib/types";
-
-let LIST_CACHE: PokemonListItem[] | null = null;
-let LIST_PROMISE: Promise<PokemonListItem[]> | null = null;
-
-function loadList(): Promise<PokemonListItem[]> {
-  if (LIST_CACHE) return Promise.resolve(LIST_CACHE);
-  if (!LIST_PROMISE) {
-    LIST_PROMISE = fetchPokemonList()
-      .then((data) => {
-        LIST_CACHE = data;
-        return data;
-      })
-      .catch((e) => {
-        LIST_PROMISE = null;
-        throw e;
-      });
-  }
-  return LIST_PROMISE;
-}
+import type { Pokemon } from "@/lib/types";
 
 interface Props {
   side: "my" | "opp";
@@ -46,10 +23,14 @@ interface Props {
 type Row = {
   slug: string;
   displayName: string;
-  spriteId?: number;
   spriteUrl?: string;
   usagePct?: number;
   recommended?: boolean;
+};
+
+const SEARCH_ALIASES_BY_SLUG: Record<string, string[]> = {
+  "samurott-hisui": ["hisuian-samurott", "hisui-samurott", "hisui"],
+  "basculegion-male": ["basculegion", "hisui", "hisuian-basculegion"],
 };
 
 function fuzzyScore(text: string, query: string): number {
@@ -75,12 +56,7 @@ export function AddMonModal({ side, onClose }: Props) {
   const suggestions = usePoolSuggestions(side);
   const pool = useAppStore((s) => (side === "my" ? s.myPool : s.oppPool));
   const addToPool = useAppStore((s) => s.addToPool);
-  const setApiStatus = useAppStore((s) => s.setApiStatus);
-  const pokemonCache = useAppStore((s) => s.pokemonCache);
 
-  const [list, setList] = useState<PokemonListItem[]>(LIST_CACHE ?? []);
-  const [loading, setLoading] = useState(!LIST_CACHE);
-  const [error, setError] = useState<Error | null>(null);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [active, setActive] = useState(0);
@@ -101,44 +77,20 @@ export function AddMonModal({ side, onClose }: Props) {
     };
   }, []);
 
-  useEffect(() => {
-    if (LIST_CACHE) return;
-    let cancelled = false;
-    loadList()
-      .then((data) => {
-        if (cancelled) return;
-        setList(data);
-        setLoading(false);
-        setApiStatus({ pokeapi: "ok" });
-      })
-      .catch((e: Error) => {
-        if (cancelled) return;
-        setError(e);
-        setLoading(false);
-        setApiStatus({ pokeapi: "down" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [setApiStatus]);
-
-  const listBySlug = useMemo(() => {
-    const m = new Map<string, PokemonListItem>();
-    for (const it of list) m.set(it.slug, it);
-    return m;
-  }, [list]);
-
   const rows: Row[] = useMemo(() => {
     const needle = q.trim();
     if (needle) {
       const normalizedNeedle = normalizePokemonLookupToken(needle);
       const ranked: Array<Row & { score: number; legal: boolean }> = [];
-      const seen = new Set<string>();
 
       for (const entry of CHAMPIONS_LEGAL_LIST) {
+        const aliasScores = (SEARCH_ALIASES_BY_SLUG[entry.slug] ?? []).map((alias) =>
+          fuzzyScore(normalizePokemonLookupToken(alias), normalizedNeedle),
+        );
         const score = Math.max(
           fuzzyScore(normalizePokemonLookupToken(entry.name), normalizedNeedle),
           fuzzyScore(normalizePokemonLookupToken(entry.slug), normalizedNeedle),
+          ...aliasScores,
         );
         if (score <= 0) continue;
         ranked.push({
@@ -148,28 +100,9 @@ export function AddMonModal({ side, onClose }: Props) {
           score,
           legal: true,
         });
-        seen.add(entry.slug);
-      }
-
-      for (const item of list) {
-        if (seen.has(item.slug)) continue;
-        const score = Math.max(
-          fuzzyScore(normalizePokemonLookupToken(item.name), normalizedNeedle),
-          fuzzyScore(normalizePokemonLookupToken(item.slug), normalizedNeedle),
-        );
-        if (score > 0) {
-          ranked.push({
-            slug: item.slug,
-            displayName: item.name,
-            spriteId: item.id,
-            score,
-            legal: false,
-          });
-        }
       }
 
       ranked.sort((a, b) => {
-        if (a.legal !== b.legal) return a.legal ? -1 : 1;
         if (a.score !== b.score) return b.score - a.score;
         return a.displayName.localeCompare(b.displayName);
       });
@@ -179,19 +112,16 @@ export function AddMonModal({ side, onClose }: Props) {
     if (side !== "opp" || !suggestions) return [];
     return suggestions.map((s) => {
       const legalEntry = getChampionsEntry(s.slug) ?? getChampionsEntry(s.displayName);
-      const lookupSlug = legalEntry?.slug ?? s.slug;
-      const item = listBySlug.get(lookupSlug) ?? listBySlug.get(s.slug);
-      const cached = pokemonCache.get(lookupSlug) ?? pokemonCache.get(s.slug);
+      if (!legalEntry) return null;
       return {
-        slug: lookupSlug,
-        displayName: legalEntry?.name ?? s.displayName,
-        spriteId: item?.id ?? cached?.id,
-        spriteUrl: legalEntry?.spriteUrl ?? cached?.spriteUrl,
+        slug: legalEntry.slug,
+        displayName: legalEntry.name,
+        spriteUrl: legalEntry.spriteUrl,
         usagePct: s.usagePct,
         recommended: true,
       };
-    });
-  }, [q, list, listBySlug, pokemonCache, suggestions, side]);
+    }).filter((row): row is Row => !!row);
+  }, [q, suggestions, side]);
 
   useEffect(() => {
     setActive(0);
@@ -221,11 +151,12 @@ export function AddMonModal({ side, onClose }: Props) {
       onClose();
     } catch {
       const fallback: Pokemon = {
-        id: row.spriteId ?? 0,
+        id: 0,
         name: row.displayName,
         slug: row.slug,
         types: [],
-        spriteUrl: row.spriteUrl ?? (row.spriteId ? pokeSpriteUrl(row.spriteId) : ""),
+        spriteUrl: row.spriteUrl ?? "",
+        isLegal: true,
         moves: [],
       };
       const result = addToPool(side, fallback);
@@ -271,31 +202,24 @@ export function AddMonModal({ side, onClose }: Props) {
                 commit(rows[active]);
               }
             }}
-            placeholder={
-              loading ? "Loading Pokédex…" : "Search 1,000+ creatures…"
-            }
-            disabled={loading || busy}
+            placeholder="Search Champions-legal creatures…"
+            disabled={busy}
             className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-muted disabled:opacity-60"
           />
           <span className="font-mono text-[10px] text-dim">{rows.length}</span>
         </div>
 
-        {error && (
-          <p className="text-[11px] text-danger">
-            PokeAPI unreachable — check your connection.
-          </p>
-        )}
         {notice && (
           <p className="text-[11px] text-danger font-medium">{notice}</p>
         )}
 
         <div className="flex max-h-[320px] flex-col gap-[6px] overflow-auto">
-          {!loading && rows.length === 0 && q.trim() && (
+          {rows.length === 0 && q.trim() && (
             <div className="px-2 py-6 text-center text-[12px] text-muted">
               No matches for &ldquo;{q}&rdquo;
             </div>
           )}
-          {!loading && rows.length === 0 && !q.trim() && (
+          {rows.length === 0 && !q.trim() && (
             <div className="px-2 py-6 text-center text-[12px] text-muted">
               Start typing to search the Pokédex.
             </div>
@@ -319,9 +243,9 @@ export function AddMonModal({ side, onClose }: Props) {
                     : "var(--color-border)",
                 }}
               >
-                {row.spriteUrl || row.spriteId ? (
+                {row.spriteUrl ? (
                   <Image
-                    src={row.spriteUrl ?? pokeSpriteUrl(row.spriteId!)}
+                    src={row.spriteUrl}
                     alt=""
                     width={32}
                     height={32}

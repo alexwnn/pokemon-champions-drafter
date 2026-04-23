@@ -51,6 +51,7 @@ export interface Pokemon {
   id: number;
   name: string;
   slug: string;
+  isLegal?: boolean;
   types: TypeName[];
   spriteUrl: string;
   moves: PokemonMove[];

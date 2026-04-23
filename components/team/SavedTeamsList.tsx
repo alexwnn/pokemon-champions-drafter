@@ -11,6 +11,7 @@ import {
   parseShowdown,
   slugToPretty,
 } from "@/lib/showdown";
+import { getChampionsEntry, resolvePokemonSlug } from "@/src/data/pokemon-registry";
 
 const SHOWDOWN_PLACEHOLDER = `Incineroar @ Sitrus Berry
 Ability: Intimidate
@@ -78,16 +79,28 @@ export function SavedTeamsList() {
       return;
     }
     setImporting(true);
+    const resolved = parsed.map((m) => {
+      const legalEntry = getChampionsEntry(m.species) ?? getChampionsEntry(m.slug);
+      const slug = legalEntry?.slug ?? resolvePokemonSlug(m.species || m.slug);
+      return { src: m, slug, legalEntry };
+    });
     const results = await Promise.allSettled(
-      parsed.map((m) => ensurePokemonDetail(m.slug)),
+      resolved.map((m) => ensurePokemonDetail(m.slug)),
     );
     const members: Parameters<typeof importMyTeam>[0] = [];
     const failed: string[] = [];
     results.forEach((r, i) => {
-      const src = parsed[i];
+      const { src, legalEntry } = resolved[i];
       if (r.status === "fulfilled") {
+        const mon = toLightPokemon(r.value);
         members.push({
-          pokemon: toLightPokemon(r.value),
+          pokemon: {
+            ...mon,
+            name: legalEntry?.name ?? mon.name,
+            slug: legalEntry?.slug ?? mon.slug,
+            isLegal: !!legalEntry,
+            spriteUrl: legalEntry?.spriteUrl ?? mon.spriteUrl,
+          },
           item: src.item ?? null,
           ability: src.ability ?? null,
           moves: src.moves.map(moveToSlug),

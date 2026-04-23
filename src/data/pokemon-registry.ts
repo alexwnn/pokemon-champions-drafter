@@ -720,3 +720,7 @@ export function resolvePokemonSlug(nameOrSlug: string): string {
   return hit.source === "local" ? hit.entry.slug : hit.slug;
 }
 
+export function isChampionsLegalPokemon(nameOrSlug: string): boolean {
+  return !!getChampionsEntry(nameOrSlug);
+}
+

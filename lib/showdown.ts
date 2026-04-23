@@ -1,6 +1,8 @@
 // Pokémon Showdown text-format parser & serializer.
 // We capture species, item, ability, and moves. EVs/IVs/nature/tera/level are ignored.
 
+import { resolvePokemonSlug } from "@/src/data/pokemon-registry";
+
 export interface ShowdownMember {
   species: string;
   slug: string;
@@ -11,12 +13,14 @@ export interface ShowdownMember {
 
 // Species name → PokeAPI slug. PokeAPI uses lowercase + dashes; strip apostrophes/periods/colons.
 export function speciesToSlug(name: string): string {
-  return name
+  const fallback = name
     .toLowerCase()
     .trim()
     .replace(/[’'`.:]/g, "")
+    .replace(/[()]/g, " ")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+  return resolvePokemonSlug(fallback);
 }
 
 // Move name → PokeAPI kebab slug. "Fake Out" → "fake-out", "U-turn" → "u-turn".

@@ -1,5 +1,6 @@
 import { ALL_TYPES } from "./types";
 import type { Pokemon, PokemonData, PokemonListItem, PokemonMove, TypeName } from "./types";
+import { getChampionsEntry, isChampionsLegalPokemon } from "@/src/data/pokemon-registry";
 
 const BASE = "https://pokeapi.co/api/v2";
 const SPRITE_BASE =
@@ -132,12 +133,14 @@ export async function fetchPokemonDetail(
   const moves = moveDetails
     .filter((m): m is PokemonMove => !!m)
     .sort((a, b) => a.name.localeCompare(b.name));
+  const legalEntry = getChampionsEntry(slug);
   return {
     id: raw.id,
-    name: prettyName(raw.name),
+    name: legalEntry?.name ?? prettyName(raw.name),
     slug: raw.name,
+    isLegal: legalEntry ? true : isChampionsLegalPokemon(raw.name),
     types,
-    spriteUrl: spriteUrl(raw.id),
+    spriteUrl: legalEntry?.spriteUrl ?? spriteUrl(raw.id),
     baseStats: {
       hp: stats["hp"] ?? 0,
       atk: stats["attack"] ?? 0,
@@ -154,12 +157,14 @@ export async function fetchPokemonDetail(
 }
 
 export function toLightPokemon(data: PokemonData): Pokemon {
+  const legalEntry = getChampionsEntry(data.slug) ?? getChampionsEntry(data.name);
   return {
     id: data.id,
-    name: data.name,
-    slug: data.slug,
+    name: legalEntry?.name ?? data.name,
+    slug: legalEntry?.slug ?? data.slug,
+    isLegal: legalEntry ? true : !!data.isLegal,
     types: data.types,
-    spriteUrl: data.spriteUrl,
+    spriteUrl: legalEntry?.spriteUrl ?? data.spriteUrl,
     moves: data.moves,
   };
 }

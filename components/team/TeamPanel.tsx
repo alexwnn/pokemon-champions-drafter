@@ -263,6 +263,11 @@ function PoolCard({
         <div className="truncate text-[13px] font-semibold leading-tight">
           {mon.name}
         </div>
+        {mon.isLegal === false && (
+          <div className="mt-0.5 inline-flex rounded border border-danger/45 bg-danger-soft px-1.5 py-[1px] font-mono text-[9px] uppercase tracking-[0.6px] text-danger">
+            Extra-National
+          </div>
+        )}
         <div className="mt-1 flex flex-wrap gap-1">
           {mon.types.map((t) => (
             <TypePill key={t} type={t} size="xs" />
