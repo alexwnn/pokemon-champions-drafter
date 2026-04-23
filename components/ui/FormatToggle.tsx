@@ -17,7 +17,7 @@ export function FormatToggle() {
           ? "Doubles — click for Singles"
           : "Singles — click for Doubles"
       }
-      className="inline-flex items-center gap-2 rounded-[7px] border border-border bg-surface-2 px-[10px] py-[5px] transition-colors hover:border-border-hi"
+      className="inline-flex items-center gap-2 rounded-[7px] border border-border bg-surface-2 px-[8px] py-[5px] transition-colors hover:border-border-hi xl:px-[10px]"
       style={{ color: "var(--color-text)" }}
     >
       <span className="inline-flex items-center gap-[2px]">
@@ -25,7 +25,7 @@ export function FormatToggle() {
         {isDoubles && <Pokeball color={accent} />}
       </span>
       <span
-        className="font-mono text-[10px] font-semibold uppercase tracking-[0.5px]"
+        className="hidden font-mono text-[10px] font-semibold uppercase tracking-[0.5px] xl:inline"
         style={{ color: accent }}
       >
         {isDoubles ? "doubles" : "singles"}

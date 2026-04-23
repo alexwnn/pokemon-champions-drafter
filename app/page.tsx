@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { Save } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { FormatToggle } from "@/components/ui/FormatToggle";
 import { TeamPanel } from "@/components/team/TeamPanel";
@@ -35,10 +36,10 @@ export default function Home() {
             priority
             className="h-9 w-9 shrink-0 [image-rendering:pixelated]"
           />
-          <div className="text-base font-semibold tracking-tight">
+          <div className="hidden text-base font-semibold tracking-tight xl:block">
             Machampion
           </div>
-          <div className="h-[18px] w-px bg-border" />
+          <div className="hidden h-[18px] w-px bg-border xl:block" />
           <FormatToggle />
         </div>
 
@@ -47,15 +48,18 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setSaveOpen(true)}
-            className="rounded-[7px] border-none bg-primary px-[14px] py-[7px] text-xs font-semibold text-white"
+            aria-label="Save team"
+            title="Save team"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-surface text-muted transition-colors hover:border-primary hover:text-text xl:h-auto xl:w-auto xl:rounded-[7px] xl:border-none xl:bg-primary xl:px-[14px] xl:py-[7px] xl:text-xs xl:font-semibold xl:text-white"
           >
-            Save team
+            <Save size={16} className="xl:hidden" />
+            <span className="hidden xl:inline">Save team</span>
           </button>
         </div>
       </header>
 
-      <main className="grid flex-1 grid-cols-1 items-start gap-3.5 p-3.5 xl:grid-cols-[240px_minmax(0,1fr)_240px]">
-        <aside className="order-2 min-w-0 xl:order-1">
+      <main className="grid flex-1 grid-cols-1 items-start gap-3.5 p-3.5 xl:grid-cols-[300px_minmax(0,1fr)_300px]">
+        <aside className="order-2 min-w-0 xl:order-1 xl:self-start xl:sticky xl:top-3.5">
           <TeamPanel
             side="my"
             title="My Pool"
@@ -71,7 +75,7 @@ export default function Home() {
           <RecommendationPanel />
         </section>
 
-        <aside className="order-3 min-w-0">
+        <aside className="order-3 min-w-0 xl:self-start xl:sticky xl:top-3.5">
           <TeamPanel
             side="opp"
             title="Opponent Pool"

@@ -60,7 +60,7 @@ export function TeamPanel({
   const accentText = accent === "danger" ? "text-danger" : "text-primary";
 
   return (
-    <section className="flex flex-col rounded-[10px] border border-border bg-surface">
+    <section className="flex flex-col rounded-[10px] border border-border bg-surface xl:max-h-[calc(100vh-28px)] xl:overflow-y-auto">
       <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <h3
@@ -259,6 +259,39 @@ function PoolCard({
         )}
       </button>
 
+      {/* X / pick-number — absolutely positioned so they never shift the card layout */}
+      {hovered ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label={`Remove ${mon.name}`}
+          className="absolute right-2 top-2 inline-flex h-[22px] w-[22px] items-center justify-center rounded-full border bg-transparent hover:border-danger hover:bg-danger hover:text-white"
+          style={{
+            borderColor: "var(--color-border-hi)",
+            color: "var(--color-muted)",
+          }}
+        >
+          <X size={10} strokeWidth={2.2} />
+        </button>
+      ) : (
+        pickNumber !== null && (
+          <span
+            className="absolute right-2 top-2 inline-flex items-center justify-center font-mono text-[11px] font-bold leading-none text-white"
+            style={{
+              height: 20,
+              width: 20,
+              borderRadius: "50%",
+              background: accentColor,
+            }}
+          >
+            {pickNumber}
+          </span>
+        )
+      )}
+
       <div className="min-w-0 flex-1 overflow-hidden">
         <div className="truncate text-[13px] font-semibold leading-tight">
           {mon.name}
@@ -274,38 +307,6 @@ function PoolCard({
           ))}
         </div>
       </div>
-
-      {hovered ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          aria-label={`Remove ${mon.name}`}
-          className="inline-flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border bg-transparent hover:border-danger hover:bg-danger hover:text-white"
-          style={{
-            borderColor: "var(--color-border-hi)",
-            color: "var(--color-muted)",
-          }}
-        >
-          <X size={10} strokeWidth={2.2} />
-        </button>
-      ) : (
-        pickNumber !== null && (
-          <span
-            className="inline-flex shrink-0 items-center justify-center font-mono text-[11px] font-bold leading-none text-white"
-            style={{
-              height: 20,
-              width: 20,
-              borderRadius: "50%",
-              background: accentColor,
-            }}
-          >
-            {pickNumber}
-          </span>
-        )
-      )}
     </div>
   );
 }

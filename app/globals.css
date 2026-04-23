@@ -2,10 +2,10 @@
 
 @theme {
   /* Dark (default) — warm slate with purple/red accents */
-  --color-bg: #0f1115;
-  --color-surface: #161920;
-  --color-surface-2: #1d2028;
-  --color-border: #262a33;
+  --color-bg: transparent;
+  --color-surface: rgba(18, 20, 26, 0.82);
+  --color-surface-2: rgba(26, 29, 37, 0.80);
+  --color-border: rgba(50, 56, 70, 0.90);
   --color-border-hi: #363a44;
   --color-text: #e8e9ec;
   --color-muted: #8a8f9c;
@@ -60,10 +60,10 @@
 }
 
 [data-theme="light"] {
-  --color-bg: #f5f4f0;
-  --color-surface: #ffffff;
-  --color-surface-2: #f0efea;
-  --color-border: #e3e0d8;
+  --color-bg: transparent;
+  --color-surface: rgba(255, 255, 255, 0.82);
+  --color-surface-2: rgba(240, 239, 234, 0.80);
+  --color-border: rgba(210, 206, 196, 0.90);
   --color-border-hi: #c8c4b8;
   --color-text: #1a1a1c;
   --color-muted: #6b6c72;
@@ -92,7 +92,12 @@
 
 html,
 body {
-  background: var(--color-bg);
+  background-color: #0f1115;
+  background-image: url('/bg.png');
+  background-size: cover;
+  background-position: center top;
+  background-attachment: fixed;
+  image-rendering: high-quality;
   color: var(--color-text);
 }
 

@@ -2,7 +2,7 @@
 
 import clsx from "clsx";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { multiplierBgVar, multiplierTextVar, multiplierLabel } from "@/lib/theme";
 import { useAnalysis } from "@/hooks/useAnalysis";
 import { useAppStore } from "@/stores/appStore";
@@ -28,6 +28,24 @@ export function CoverageMatrix() {
   const toggleBattle = useAppStore((s) => s.toggleBattle);
 
   const [hoverCell, setHoverCell] = useState<[number, number] | null>(null);
+  const [scale, setScale] = useState(1);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Row-label col: 150px + 10px paddingRight. Each opp col: CELL + 4px border-spacing.
+  // Outer wrapper has p-5 (20px each side).
+  const naturalWidth = 40 + 150 + 10 + opps.length * (CELL + 4);
+  // Header row (sprites + names ≈ 80px) + each data row (CELL + 4px border-spacing).
+  const naturalHeight = 40 + 80 + mine.length * (CELL + 4);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setScale(Math.min(1, entry.contentRect.width / naturalWidth));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [naturalWidth]);
 
   if (mine.length === 0 || opps.length === 0) {
     return (
@@ -58,9 +76,20 @@ export function CoverageMatrix() {
         </span>
       </header>
 
-      {/* Matrix table */}
-      <div className="flex justify-center p-5 overflow-x-auto">
-        <table style={{ borderCollapse: "separate", borderSpacing: 4 }}>
+      {/* Matrix table — scales down proportionally on narrow containers */}
+      <div
+        ref={wrapperRef}
+        className="flex justify-center p-5 overflow-hidden"
+        style={{ height: naturalHeight * scale + 40 }}
+      >
+        <table
+          style={{
+            borderCollapse: "separate",
+            borderSpacing: 4,
+            transform: `scale(${scale})`,
+            transformOrigin: "top center",
+          }}
+        >
           <thead>
             <tr>
               <th />
